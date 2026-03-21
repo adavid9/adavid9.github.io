@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DDD Flashcards</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0e12; --surface: #161820; --surface2: #1e2030; --border: #2a2d3e;
+  --accent: #e8c547; --accent2: #5e81f4; --text: #e4e6f0; --text-dim: #7c8098;
+  --text-bright: #ffffff; --green: #57c98e; --red: #f4645e; --card-h: 380px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:"DM Sans",sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
+header { padding:1.5rem 2.5rem; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); }
+.logo { display:flex; align-items:baseline; gap:.6rem; }
+.logo-tag { font-family:"JetBrains Mono",monospace; font-size:.7rem; color:var(--accent); background:rgba(232,197,71,.1); padding:.2rem .5rem; border:1px solid rgba(232,197,71,.3); border-radius:3px; letter-spacing:.15em; }
+.logo-title { font-family:"Playfair Display",serif; font-size:1.2rem; color:var(--text-bright); }
+.hstats { display:flex; gap:1.5rem; }
+.stat { text-align:center; }
+.stat-num { font-family:"JetBrains Mono",monospace; font-size:1.3rem; font-weight:600; display:block; color:var(--accent); line-height:1; }
+.stat-label { font-size:.6rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.1em; }
+.catbar { padding:.75rem 2.5rem; display:flex; gap:.4rem; overflow-x:auto; scrollbar-width:none; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+.catbar::-webkit-scrollbar { display:none; }
+.catbtn { padding:.35rem .9rem; border:1px solid var(--border); background:transparent; color:var(--text-dim); border-radius:100px; font-size:.75rem; font-family:"DM Sans",sans-serif; cursor:pointer; transition:all .2s; white-space:nowrap; }
+.catbtn:hover { border-color:var(--accent2); color:var(--text); }
+.catbtn.active { background:var(--accent); border-color:var(--accent); color:#0d0e12; font-weight:500; }
+main { display:grid; grid-template-columns:1fr 280px; gap:2rem; padding:2rem 2.5rem; max-width:1300px; margin:0 auto; }
+.card-area { display:flex; flex-direction:column; gap:1.25rem; }
+.card-meta { display:flex; justify-content:space-between; align-items:center; }
+.counter { font-family:"JetBrains Mono",monospace; font-size:.72rem; color:var(--text-dim); }
+.prog-wrap { width:180px; height:4px; background:var(--surface2); border-radius:99px; overflow:hidden; }
+.prog-bar { height:100%; background:linear-gradient(90deg,var(--accent2),var(--accent)); border-radius:99px; transition:width .4s; }
+.fc-wrap { perspective:1200px; height:var(--card-h); }
+.fc { width:100%; height:100%; position:relative; transform-style:preserve-3d; transition:transform .55s cubic-bezier(.4,0,.2,1); cursor:pointer; }
+.fc.flipped { transform:rotateY(180deg); }
+.face { position:absolute; inset:0; backface-visibility:hidden; border-radius:16px; padding:2rem 2.2rem; display:flex; flex-direction:column; border:1px solid var(--border); overflow:hidden; }
+.front { background:var(--surface); justify-content:center; align-items:center; text-align:center; }
+.back { background:var(--surface); transform:rotateY(180deg); gap:.75rem; }
+.cat-tag { position:absolute; top:1rem; left:1.4rem; font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.12em; text-transform:uppercase; color:var(--accent2); background:rgba(94,129,244,.1); padding:.18rem .55rem; border-radius:4px; border:1px solid rgba(94,129,244,.2); }
+.flip-hint { position:absolute; top:1rem; right:1.4rem; font-size:.62rem; color:var(--text-dim); }
+.fq { font-family:"Playfair Display",serif; font-size:1.5rem; color:var(--text-bright); line-height:1.3; margin-bottom:.4rem; }
+.fsub { font-size:.82rem; color:var(--text-dim); font-style:italic; }
+.bterm { font-family:"Playfair Display",serif; font-size:1rem; color:var(--accent); }
+.bdef { font-size:.84rem; line-height:1.65; color:var(--text); flex:1; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+.bdef strong { color:var(--accent2); font-weight:500; }
+.code-block { background:#0a0b0e; border:1px solid var(--border); border-radius:8px; padding:.65rem .9rem; font-family:"JetBrains Mono",monospace; font-size:.69rem; line-height:1.65; color:#c0caf5; overflow-x:auto; margin-top:.5rem; white-space:pre; scrollbar-width:thin; }
+.code-block .kw { color:#bb9af7; }
+.code-block .cls { color:#7dcfff; }
+.code-block .str { color:#9ece6a; }
+.code-block .cmt { color:#565f89; font-style:italic; }
+.code-block .fn { color:#7aa2f7; }
+.code-block .num { color:#ff9e64; }
+.controls { display:flex; align-items:center; justify-content:center; gap:.75rem; flex-wrap:wrap; }
+.btn { padding:.6rem 1.3rem; border-radius:10px; border:none; cursor:pointer; font-family:"DM Sans",sans-serif; font-size:.82rem; font-weight:500; transition:all .2s; }
+.btn-nav { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+.btn-nav:hover { border-color:var(--accent2); color:var(--accent2); }
+.btn-know { background:rgba(87,201,142,.12); color:var(--green); border:1px solid rgba(87,201,142,.3); }
+.btn-know:hover { background:rgba(87,201,142,.22); }
+.btn-unk { background:rgba(244,100,94,.12); color:var(--red); border:1px solid rgba(244,100,94,.3); }
+.btn-unk:hover { background:rgba(244,100,94,.22); }
+.sidebar { display:flex; flex-direction:column; gap:1.25rem; }
+.scard { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.1rem; }
+.stitle { font-size:.65rem; letter-spacing:.15em; text-transform:uppercase; color:var(--text-dim); margin-bottom:.9rem; display:flex; align-items:center; gap:.5rem; }
+.stitle::after { content:""; flex:1; height:1px; background:var(--border); }
+.donut-wrap { display:flex; align-items:center; gap:1.1rem; }
+.dlegend { display:flex; flex-direction:column; gap:.4rem; font-size:.73rem; }
+.li { display:flex; align-items:center; gap:.45rem; color:var(--text-dim); }
+.dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.dot.g { background:var(--green); }
+.dot.r { background:var(--red); }
+.dot.gr { background:var(--border); }
+.lc { font-family:"JetBrains Mono",monospace; color:var(--text); margin-left:auto; }
+.kl { display:flex; flex-direction:column; gap:.45rem; }
+.ki { display:flex; justify-content:space-between; align-items:center; }
+.kn { color:var(--text-dim); font-size:.73rem; }
+.kb { font-family:"JetBrains Mono",monospace; font-size:.62rem; padding:.15rem .45rem; border-radius:3px; }
+.kb.kn2 { background:rgba(87,201,142,.15); color:var(--green); }
+.kb.un { background:rgba(244,100,94,.15); color:var(--red); }
+.kb.nt { background:var(--surface2); color:var(--text-dim); }
+.shorts { display:grid; grid-template-columns:auto 1fr; gap:.35rem .65rem; font-size:.72rem; color:var(--text-dim); align-items:center; }
+.key { font-family:"JetBrains Mono",monospace; font-size:.62rem; background:var(--surface2); border:1px solid var(--border); border-radius:3px; padding:.15rem .45rem; color:var(--text); text-align:center; justify-self:start; }
+.btn-shuf { background:var(--surface2); color:var(--text-dim); border:1px solid var(--border); width:100%; padding:.6rem; border-radius:8px; font-size:.78rem; cursor:pointer; font-family:"DM Sans",sans-serif; transition:all .2s; }
+.btn-shuf:hover { color:var(--text); border-color:var(--accent2); }
+.overlay { display:none; position:fixed; inset:0; background:rgba(13,14,18,.95); z-index:100; justify-content:center; align-items:center; flex-direction:column; gap:1.5rem; text-align:center; }
+.overlay.show { display:flex; }
+.ov-emoji { font-size:3.5rem; }
+.ov-title { font-family:"Playfair Display",serif; font-size:2.2rem; color:var(--text-bright); }
+.ov-sub { color:var(--text-dim); }
+.ov-score { font-family:"JetBrains Mono",monospace; font-size:1.1rem; color:var(--accent); background:rgba(232,197,71,.1); padding:.65rem 2rem; border-radius:8px; border:1px solid rgba(232,197,71,.2); }
+.btn-restart { background:var(--accent); color:#0d0e12; border:none; padding:.75rem 2.2rem; border-radius:10px; font-size:.88rem; font-weight:600; cursor:pointer; }
+.btn-restart:hover { opacity:.85; }
+@media(max-width:880px) {
+  main { grid-template-columns:1fr; }
+  .sidebar { display:none; }
+  header { padding:1rem 1.5rem; }
+  .catbar { padding:.65rem 1.5rem; }
+  main { padding:1.5rem; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="logo-tag">DDD</span>
+    <span class="logo-title">Fiszki &mdash; Domain-Driven Design</span>
+  </div>
+  <div class="hstats">
+    <div class="stat"><span class="stat-num" id="hTotal">0</span><span class="stat-label">Wszystkich</span></div>
+    <div class="stat"><span class="stat-num" style="color:var(--green)" id="hKnown">0</span><span class="stat-label">Umiem</span></div>
+    <div class="stat"><span class="stat-num" style="color:var(--red)" id="hUnknown">0</span><span class="stat-label">Ucze sie</span></div>
+  </div>
+</header>
+
+<div class="catbar" id="catbar"></div>
+
+<main>
+  <div class="card-area">
+    <div class="card-meta">
+      <span class="counter" id="counter">Fiszka 1 z 37</span>
+      <div class="prog-wrap"><div class="prog-bar" id="progBar" style="width:0%"></div></div>
+    </div>
+    <div class="fc-wrap">
+      <div class="fc" id="fc">
+        <div class="face front">
+          <span class="cat-tag" id="fCat">-</span>
+          <span class="flip-hint">kliknij, by odwrocic</span>
+          <h2 class="fq" id="fQ">-</h2>
+          <p class="fsub" id="fSub">-</p>
+        </div>
+        <div class="face back">
+          <span class="cat-tag" id="bCat">-</span>
+          <h3 class="bterm" id="bTerm">-</h3>
+          <div class="bdef" id="bDef">-</div>
+        </div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn btn-nav" id="btnPrev">&#8592; Poprzednia</button>
+      <button class="btn btn-unk" id="btnUnk">&#10007; Ucze sie</button>
+      <button class="btn btn-know" id="btnKnow">&#10003; Umiem</button>
+      <button class="btn btn-nav" id="btnNext">Nastepna &#8594;</button>
+    </div>
+  </div>
+
+  <aside class="sidebar">
+    <div class="scard">
+      <div class="stitle">Postep</div>
+      <div class="donut-wrap">
+        <svg width="80" height="80" viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="30" fill="none" stroke="var(--border)" stroke-width="10"/>
+          <circle id="dgK" cx="40" cy="40" r="30" fill="none" stroke="var(--green)" stroke-width="10"
+            stroke-dasharray="0 188.5" stroke-linecap="round"
+            style="transform:rotate(-90deg);transform-origin:center;transition:stroke-dasharray .5s"/>
+          <circle id="dgU" cx="40" cy="40" r="30" fill="none" stroke="var(--red)" stroke-width="10"
+            stroke-dasharray="0 188.5" stroke-linecap="round"
+            style="transform:rotate(-90deg);transform-origin:center;transition:all .5s"/>
+          <text x="40" y="45" text-anchor="middle" fill="var(--text-bright)" font-family="JetBrains Mono" font-size="13" font-weight="600" id="dgPct">0%</text>
+        </svg>
+        <div class="dlegend">
+          <div class="li"><span class="dot g"></span><span>Umiem</span><span class="lc" id="lgK">0</span></div>
+          <div class="li"><span class="dot r"></span><span>Ucze sie</span><span class="lc" id="lgU">0</span></div>
+          <div class="li"><span class="dot gr"></span><span>Niewidziane</span><span class="lc" id="lgN">0</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="scard">
+      <div class="stitle">Kategorie</div>
+      <div class="kl" id="kList"></div>
+    </div>
+    <div class="scard">
+      <button class="btn-shuf" id="btnShuf">&#8645; Potasuj fiszki</button>
+    </div>
+    <div class="scard">
+      <div class="stitle">Skroty</div>
+      <div class="shorts">
+        <span class="key">Spacja</span><span>Odwroc</span>
+        <span class="key">&#8594;</span><span>Nastepna</span>
+        <span class="key">&#8592;</span><span>Poprzednia</span>
+        <span class="key">K</span><span>Znam &#10003;</span>
+        <span class="key">U</span><span>Nie znam &#10007;</span>
+        <span class="key">S</span><span>Tasuj</span>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<div class="overlay" id="overlay">
+  <div class="ov-emoji">&#127881;</div>
+  <h2 class="ov-title">Koniec talii!</h2>
+  <p class="ov-sub">Przejrzales wszystkie fiszki</p>
+  <div class="ov-score" id="ovScore">- / -</div>
+  <button class="btn-restart" id="btnRestart">Zacznij od nowa</button>
+</div>
+
+<script>
+var ALL_CARDS = [{"cat": "Fundamenty", "q": "Czym jest Domain-Driven Design?", "sub": "Podstawowa definicja", "term": "Domain-Driven Design (DDD)", "def": "Podejscie do tworzenia oprogramowania, w ktorym <strong>model domeny</strong> jest centrum projektu. Zlozonosc systemu jest opanowywana poprzez gleboke zrozumienie biznesowej dziedziny problemu i odzwierciedlenie jej w kodzie.<br><br><strong>Kluczowe przekonanie:</strong> Design oprogramowania powinien byc napedzany przez wiedze o domenie, a nie przez technologie.", "code": null}, {"cat": "Fundamenty", "q": "Co to jest Knowledge Crunching?", "sub": "Pierwsza zasada DDD", "term": "Knowledge Crunching (Zgniatanie Wiedzy)", "def": "Proces intensywnej, iteracyjnej wspolpracy miedzy programistami a ekspertami domenowymi, w ktorym wiedza biznesowa jest <strong>destylowana</strong> do modelu.<br><br>Analogia autora: tak jak analitycy finansowi crunching numbers przesiewaja liczby w poszukiwaniu sensu, tak modelerzy przesiewaja wiedze eksperta w poszukiwaniu uzytecznych abstrakcji.<br><br><strong>Wymaga:</strong> rysowania diagramow razem, przechodzenia przez scenariusze, eksperymentowania z jezykiem.", "code": null}, {"cat": "Fundamenty", "q": "Dlaczego model musi byc implementowany?", "sub": "Model i Implementacja", "term": "Model-Driven Design", "def": "Model, ktory nie jest odzwierciedlony w kodzie, szybko sie <strong>rozczaja</strong> z implementacja i staje sie bezuzyteczny. DDD wymaga bezposredniego mapowania konceptow modelu na obiekty w kodzie.<br><br><strong>Antywzorzec:</strong> Model UML na tablicy + zupelnie inny kod ponizej.<br><strong>Dobra praktyka:</strong> Zmiana w modelu = zmiana w kodzie i odwrotnie.", "code": null}, {"cat": "Fundamenty", "q": "Czym sa 5 skladnikow skutecznego modelowania?", "sub": "Wg Rozdzialu 1", "term": "Ingredients of Effective Modeling", "def": "Wedlug Evansa skuteczne modelowanie wymaga:<br><br>1. <strong>Binding model and implementation</strong> - model musi byc powiazany z kodem<br>2. <strong>Cultivating a language</strong> - wspolny jezyk zespolu oparty na modelu<br>3. <strong>Knowledge-rich model</strong> - model zawiera reguly i zachowania, nie tylko dane<br>4. <strong>Distilling the model</strong> - usuwanie zbednych konceptow<br>5. <strong>Brainstorming and experimenting</strong> - setki eksperymentalnych wersji", "code": null}, {"cat": "Ubiquitous Language", "q": "Czym jest Ubiquitous Language?", "sub": "Jeden z kluczowych wzorcow DDD", "term": "Ubiquitous Language (Wszechobecny Jezyk)", "def": "Wspolny, precyzyjny jezyk uzywany przez <strong>wszystkich czlonkow zespolu</strong> (programistow i ekspertow domenowych) w rozmowach, dokumentacji, diagramach i <strong>w kodzie</strong>.<br><br>Nie jest to zargon techniczny ani biznesowy - to jezyk hybrydowy, ktory ewoluuje razem z modelem.<br><br><strong>Zasada:</strong> Jesli ekspert uzywa slowa, ktorego nie ma w kodzie - model jest bledny. Jesli kod uzywa terminu, ktorego ekspert nie rozumie - kod jest bledny.", "code": null}, {"cat": "Ubiquitous Language", "q": "Jak wprowadzic Ubiquitous Language w praktyce?", "sub": "Konkretne techniki", "term": "Praktyki UL", "def": "<strong>1. Slownik domenowy</strong> - lista terminow z definicjami uzgodnionymi z ekspertami<br><strong>2. Spojne nazwy</strong> - klasy, metody i zmienne uzywaja tych samych slow co eksperci<br><strong>3. Rewizja jezyka</strong> - kiedy rozmowy staja sie niezgrabne, model wymaga zmiany<br><strong>4. Odrzucenie synonimow</strong> - Customer i Client nie moga oznaczac tego samego", "code": "<span class=\"cmt\">// Zly przyklad - techniczna nazwa oderwana od domeny</span>\n<span class=\"kw\">class</span> <span class=\"cls\">UserRecord</span> {\n  <span class=\"fn\">processPayment</span>(amount) { ... }\n}\n\n<span class=\"cmt\">// Dobry przyklad - Ubiquitous Language</span>\n<span class=\"kw\">class</span> <span class=\"cls\">Customer</span> {\n  <span class=\"fn\">placeOrder</span>(cart) { ... }\n  <span class=\"fn\">confirmPurchase</span>(order) { ... }\n}"}, {"cat": "Architektura", "q": "Czym jest Layered Architecture w DDD?", "sub": "Rozdzial 4", "term": "Layered Architecture (Architektura Warstwowa)", "def": "Podzial aplikacji na 4 warstwy, gdzie logika domenowa jest <strong>izolowana</strong> od infrastruktury:<br><br><strong>UI Layer</strong> - prezentacja, obsluga zadan uzytkownika<br><strong>Application Layer</strong> - orkiestracja, use-casey, brak logiki domenowej<br><strong>Domain Layer</strong> - model, reguly biznesowe, serce systemu<br><strong>Infrastructure Layer</strong> - bazy danych, siec, zewnetrzne API<br><br><strong>Zasada:</strong> Kazda warstwa zalezy tylko od warstw nizej. Domena <em>nie zalezy</em> od infrastruktury.", "code": "<span class=\"cmt\">// Application Layer - orkiestruje</span>\n<span class=\"kw\">class</span> <span class=\"cls\">TransferMoneyService</span> {\n  <span class=\"fn\">transfer</span>(fromId, toId, amount) {\n    <span class=\"kw\">const</span> from = <span class=\"kw\">this</span>.repo.<span class=\"fn\">findById</span>(fromId);\n    <span class=\"kw\">const</span> to = <span class=\"kw\">this</span>.repo.<span class=\"fn\">findById</span>(toId);\n    from.<span class=\"fn\">debit</span>(amount);\n    to.<span class=\"fn\">credit</span>(amount);\n    <span class=\"kw\">this</span>.repo.<span class=\"fn\">save</span>(from);\n    <span class=\"kw\">this</span>.repo.<span class=\"fn\">save</span>(to);\n  }\n}"}, {"cat": "Building Blocks", "q": "Czym jest Entity (Encja)?", "sub": "Jeden z podstawowych wzorcow modelu", "term": "Entity (Encja)", "def": "Obiekt, ktory posiada <strong>tozsamosc</strong> - ma unikalny identyfikator i jest sledzony przez caly cykl zycia, niezaleznie od zmian swoich atrybutow.<br><br><strong>Test:</strong> Czy moge podmienic wszystkie atrybuty i to nadal ten sam obiekt? Jesli tak - to encja.<br><br><strong>Przyklady:</strong> Osoba (ma PESEL), Konto bankowe (ma numer), Zamowienie (ma ID).", "code": "<span class=\"kw\">class</span> <span class=\"cls\">Customer</span> {\n  <span class=\"fn\">constructor</span>(id, name) {\n    <span class=\"kw\">this</span>.id = id;\n    <span class=\"kw\">this</span>.name = name;\n  }\n  <span class=\"fn\">equals</span>(other) {\n    <span class=\"kw\">return this</span>.id === other.id; <span class=\"cmt\">// tozsamosc = ID</span>\n  }\n  <span class=\"fn\">changeName</span>(newName) {\n    <span class=\"kw\">this</span>.name = newName; <span class=\"cmt\">// nadal ten sam Customer</span>\n  }\n}"}, {"cat": "Building Blocks", "q": "Czym jest Value Object?", "sub": "Brak tozsamosci, tylko wartosc", "term": "Value Object (Obiekt Wartosci)", "def": "Obiekt opisujacy pewna <strong>ceche</strong> lub <strong>miare</strong>, ktory nie posiada wlasnej tozsamosci. Dwa Value Objecty o tych samych atrybutach sa <strong>identyczne</strong>.<br><br><strong>Kluczowe cechy:</strong><br>- <strong>Niemutowalnosc</strong> - nie zmieniamy, tworzymy nowy<br>- <strong>Rownosc przez wartosc</strong> - nie przez referencje<br>- <strong>Self-contained</strong> - hermetyzuja zwiazane ze soba atrybuty<br><br><strong>Przyklady:</strong> Money(100, PLN), Address, DateRange, Color", "code": "<span class=\"kw\">class</span> <span class=\"cls\">Money</span> {\n  <span class=\"fn\">constructor</span>(amount, currency) {\n    <span class=\"kw\">if</span> (amount &lt; 0) <span class=\"kw\">throw new</span> <span class=\"cls\">Error</span>(<span class=\"str\">\"Kwota ujemna\"</span>);\n    <span class=\"kw\">this</span>.amount = amount;\n    <span class=\"kw\">this</span>.currency = currency;\n  }\n  <span class=\"fn\">add</span>(other) {\n    <span class=\"kw\">if</span> (<span class=\"kw\">this</span>.currency !== other.currency) <span class=\"kw\">throw new</span> <span class=\"cls\">Error</span>(<span class=\"str\">\"Niezgodna waluta\"</span>);\n    <span class=\"kw\">return new</span> <span class=\"cls\">Money</span>(<span class=\"kw\">this</span>.amount + other.amount, <span class=\"kw\">this</span>.currency);\n  }\n  <span class=\"fn\">equals</span>(other) {\n    <span class=\"kw\">return this</span>.amount === other.amount && <span class=\"kw\">this</span>.currency === other.currency;\n  }\n}"}, {"cat": "Building Blocks", "q": "Entity vs Value Object - jak wybrac?", "sub": "Praktyczna decyzja projektowa", "term": "Entity vs Value Object", "def": "<strong>Pytanie kluczowe:</strong> Czy obiekt ma ciaglosc i tozsamosc, ktora musimy sledzic?<br><br><strong>Entity, gdy:</strong><br>- Obiekt zyje przez czas i zmienia stan<br>- Potrzebujemy go identyfikowac niezaleznie od atrybutow<br>- Np. User, Order, BankAccount<br><br><strong>Value Object, gdy:</strong><br>- Obiekt opisuje cos, nie jest kimym<br>- Dwa obiekty o tych samych polach sa zamienne<br>- Np. Address, PhoneNumber, Color, Price", "code": null}, {"cat": "Building Blocks", "q": "Czym jest Domain Service?", "sub": "Gdy logika nie nalezy do zadnego obiektu", "term": "Domain Service", "def": "Operacja domenowa, ktora nie nalezy naturalnie do zadnej Encji ani Value Object. Charakteryzuje sie:<br><br>- <strong>Bezstanowoscia</strong> - nie trzyma danych miedzy wywolaniami<br>- <strong>Operuje na obiektach domenowych</strong> - pobiera i zwraca encje/VO<br>- <strong>Nazwa jak czasownik</strong> - wyraaza akcje domenowa<br><br><strong>Przyklad:</strong> TransferService, PricingService, RouteCalculator", "code": "<span class=\"kw\">class</span> <span class=\"cls\">FundsTransferService</span> {\n  <span class=\"fn\">transfer</span>(source, target, amount) {\n    <span class=\"kw\">if</span> (!source.<span class=\"fn\">hasFunds</span>(amount))\n      <span class=\"kw\">throw new</span> <span class=\"cls\">Error</span>(<span class=\"str\">\"Brak srodkow\"</span>);\n    source.<span class=\"fn\">debit</span>(amount);\n    target.<span class=\"fn\">credit</span>(amount);\n    <span class=\"kw\">this</span>.ledger.<span class=\"fn\">record</span>(source, target, amount);\n  }\n}"}, {"cat": "Building Blocks", "q": "Czym sa Domain Events?", "sub": "Modelowanie faktow biznesowych", "term": "Domain Events (Zdarzenia Domenowe)", "def": "Obiekt reprezentujacy <strong>fakt, ktory wydarzyl sie w domenie</strong> - cos istotnego z punktu widzenia biznesu. Zdarzenia sa niemutowalne (przeszlosc sie nie zmienia).<br><br><strong>Konwencja nazewnictwa:</strong> Czas przeszly - OrderPlaced, PaymentReceived, CustomerRegistered<br><br><strong>Zastosowania:</strong><br>- Komunikacja miedzy agregatami<br>- Integracja miedzy Bounded Contexts<br>- Audit log / Event Sourcing", "code": "<span class=\"kw\">class</span> <span class=\"cls\">OrderPlaced</span> {\n  <span class=\"fn\">constructor</span>(order) {\n    <span class=\"kw\">this</span>.occurredOn = <span class=\"kw\">new</span> <span class=\"cls\">Date</span>();\n    <span class=\"kw\">this</span>.orderId = order.id;\n    <span class=\"kw\">this</span>.customerId = order.customerId;\n    <span class=\"kw\">this</span>.totalAmount = order.<span class=\"fn\">calculateTotal</span>();\n  }\n}"}, {"cat": "Building Blocks", "q": "Czym sa Modules (Moduly) w DDD?", "sub": "Organizacja kodu odzwierciedlajaca model", "term": "Modules (Moduly)", "def": "Sposob organizacji kodu oparty na <strong>konceptach domenowych</strong>, a nie technicznych warstwach. Moduly komunikuja cos o domenie, maja wysoka kohezje wewnetrzna i niskie sprzezenie zewnetrzne.<br><br><strong>Zasada:</strong> Nazwy modulow wchodza do Ubiquitous Language.<br><br><strong>Anty-wzorzec:</strong> Moduly wedlug warstwy (controllers/, services/, repositories/) zamiast wedlug domeny.", "code": "<span class=\"cmt\">// Zla organizacja - techniczna</span>\nsrc/controllers/OrderCtrl.ts\nsrc/services/OrderSvc.ts\nsrc/repositories/OrderRepo.ts\n\n<span class=\"cmt\">// Dobra organizacja - domenowa</span>\nsrc/orders/Order.ts\nsrc/orders/OrderRepository.ts\nsrc/payments/Payment.ts\nsrc/shipping/ShipmentTracker.ts"}, {"cat": "Aggregates", "q": "Czym jest Aggregate?", "sub": "Granica spojnosci i transakcyjnosci", "term": "Aggregate (Agregat)", "def": "Klaster powiazanych obiektow (Encji i Value Objects) traktowany jako <strong>jedna jednostka</strong> pod katem zmian danych. Posiada jeden obiekt zwany <strong>Aggregate Root</strong>.<br><br><strong>Zasady:</strong><br>1. Dostep do wnetrza tylko przez Root<br>2. Zewnetrzne obiekty trzymaja jedynie referencje do Roota<br>3. Niezmienniki (invariants) musza byc zachowane w granicach agregatu<br>4. Jeden Aggregate = jedna transakcja", "code": "<span class=\"kw\">class</span> <span class=\"cls\">Order</span> { <span class=\"cmt\">// Aggregate Root</span>\n  <span class=\"fn\">constructor</span>(id, customerId) {\n    <span class=\"kw\">this</span>.id = id;\n    <span class=\"kw\">this</span>.customerId = customerId;\n    <span class=\"kw\">this</span>.items = [];\n    <span class=\"kw\">this</span>.status = <span class=\"str\">\"DRAFT\"</span>;\n  }\n  <span class=\"fn\">addItem</span>(product, qty) {\n    <span class=\"kw\">if</span> (<span class=\"kw\">this</span>.status !== <span class=\"str\">\"DRAFT\"</span>)\n      <span class=\"kw\">throw new</span> <span class=\"cls\">Error</span>(<span class=\"str\">\"Nie mozna edytowac\"</span>);\n    <span class=\"kw\">this</span>.items.<span class=\"fn\">push</span>({ product, qty });\n  }\n  <span class=\"fn\">confirm</span>() {\n    <span class=\"kw\">if</span> (<span class=\"kw\">this</span>.items.length === 0)\n      <span class=\"kw\">throw new</span> <span class=\"cls\">Error</span>(<span class=\"str\">\"Puste zamowienie\"</span>);\n    <span class=\"kw\">this</span>.status = <span class=\"str\">\"CONFIRMED\"</span>;\n  }\n}"}, {"cat": "Aggregates", "q": "Jak wyznaczac granice Agregatu?", "sub": "Praktyczne wskazowki", "term": "Aggregate Boundaries", "def": "<strong>Regula Evansa:</strong> Agregat = granica spojnosci. To co musi byc spojne w jednej transakcji, jest w jednym Agregacie.<br><br><strong>Wskazowki praktyczne:</strong><br>- Zacznij od malych agregatow (czesto 1 Root + Value Objects)<br>- Duzy Agregat = problemy z contentionem<br>- Referencje do innych Agregatow przez ID, nie obiekt<br>- Reguly biznesowe obejmujace wiele agregatow - eventual consistency", "code": "<span class=\"cmt\">// Zbyt duzy Agregat - problemy</span>\n<span class=\"kw\">class</span> <span class=\"cls\">BigOrder</span> {\n  customer: <span class=\"cls\">Customer</span>;   <span class=\"cmt\">// caly Customer!</span>\n  invoice: <span class=\"cls\">Invoice</span>;     <span class=\"cmt\">// cala faktura!</span>\n}\n\n<span class=\"cmt\">// Maly Agregat - referencje przez ID</span>\n<span class=\"kw\">class</span> <span class=\"cls\">Order</span> {\n  customerId: <span class=\"cls\">CustomerId</span>;  <span class=\"cmt\">// tylko ID!</span>\n  items: <span class=\"cls\">OrderItem</span>[];\n  <span class=\"cmt\">// Invoice to osobny Agregat</span>\n}"}, {"cat": "Lifecycle Patterns", "q": "Czym jest Repository?", "sub": "Wzorzec dostepu do agregatow", "term": "Repository (Repozytorium)", "def": "Abstrakcja, ktora symuluje kolekcje obiektow domenowych w pamieci. Ukrywa szczegoly persystencji (SQL, NoSQL, pliki) za interfejsem domenowym.<br><br><strong>Zasady:</strong><br>- Jeden Repository per Aggregate Root<br>- Interfejs w jezyku domenowym, nie SQL<br>- Ukrywa infrastrukture calkowicie<br>- Kod domenowy nie wie, gdzie sa dane", "code": "<span class=\"cmt\">// Interfejs - w warstwie domenowej</span>\n<span class=\"kw\">interface</span> <span class=\"cls\">OrderRepository</span> {\n  <span class=\"fn\">findById</span>(id): <span class=\"cls\">Order</span>;\n  <span class=\"fn\">findByCustomer</span>(cId): <span class=\"cls\">Order</span>[];\n  <span class=\"fn\">save</span>(order): <span class=\"kw\">void</span>;\n  <span class=\"fn\">remove</span>(order): <span class=\"kw\">void</span>;\n}\n\n<span class=\"cmt\">// Implementacja - w infrastrukturze</span>\n<span class=\"kw\">class</span> <span class=\"cls\">SqlOrderRepository</span> {\n  <span class=\"fn\">findById</span>(id) {\n    <span class=\"kw\">const</span> row = <span class=\"kw\">this</span>.db.<span class=\"fn\">query</span>(<span class=\"str\">\"SELECT * FROM orders WHERE id=?\"</span>, id);\n    <span class=\"kw\">return</span> row ? <span class=\"kw\">this</span>.<span class=\"fn\">reconstruct</span>(row) : <span class=\"kw\">null</span>;\n  }\n}"}, {"cat": "Lifecycle Patterns", "q": "Czym jest Factory w DDD?", "sub": "Tworzenie zlozonych obiektow", "term": "Factory (Fabryka)", "def": "Mechanizm tworzenia zlozonych Agregatow i Encji, ktory hermetyzuje logike inicjalizacji i zapewnia, ze tworzony obiekt jest od razu <strong>spojny</strong>.<br><br><strong>Kiedy uzywac Factory:</strong><br>- Tworzenie obiektu wymaga wielu krokow / walidacji<br>- Tworzenie wymaga wiedzy o wnetrzu agregatu<br>- Konstruktor staje sie zbyt skomplikowany<br><br><strong>Uwaga:</strong> Factory nie jest czescia modelu domenowego - to infrastruktura modelu", "code": "<span class=\"kw\">class</span> <span class=\"cls\">OrderFactory</span> {\n  <span class=\"fn\">createDraft</span>(customerId, address) {\n    <span class=\"kw\">const</span> id = <span class=\"cls\">OrderId</span>.<span class=\"fn\">generate</span>();\n    <span class=\"kw\">const</span> order = <span class=\"kw\">new</span> <span class=\"cls\">Order</span>(id, customerId);\n    order.<span class=\"fn\">setShipping</span>(address);\n    <span class=\"kw\">return</span> order;\n  }\n  <span class=\"fn\">reconstitute</span>(data) {\n    <span class=\"cmt\">// Odtworzenie z bazy</span>\n    <span class=\"kw\">return</span> <span class=\"cls\">Order</span>.<span class=\"fn\">fromSnapshot</span>(data);\n  }\n}"}, {"cat": "Strategic Design", "q": "Czym jest Bounded Context?", "sub": "Kluczowy wzorzec strategiczny", "term": "Bounded Context (Kontekst Ograniczony)", "def": "Wyrazna <strong>granica</strong>, w obrebie ktorej dany model domeny jest spojny i obowiazuje specyficzne Ubiquitous Language. Ten sam termin moze miec rozne znaczenie w roznych Bounded Contexts.<br><br><strong>Przyklad:</strong> Slowo Klient w kontekscie sprzedazy (Customer z historia zakupow) vs w kontekscie obslugi reklamacji (Customer jako zglaszajacy problem) - to <em>rozne modele</em>.<br><br>Bounded Context to granica odpowiedzialnosci zespolu i granica modelu.", "code": null}, {"cat": "Strategic Design", "q": "Czym jest Context Map?", "sub": "Mapa relacji miedzy kontekstami", "term": "Context Map (Mapa Kontekstow)", "def": "Diagram lub opis pokazujacy wszystkie Bounded Contexts w systemie i <strong>relacje</strong> miedzy nimi.<br><br><strong>Relacje miedzy kontekstami:</strong><br>- <strong>Shared Kernel</strong> - wspolny fragment modelu<br>- <strong>Customer-Supplier</strong> - jeden dyktuje warunki<br>- <strong>Conformist</strong> - jeden adoptuje model drugiego<br>- <strong>Anti-Corruption Layer</strong> - warstwa tlumaczaca<br>- <strong>Open Host Service</strong> - publikowany protokol integracji", "code": null}, {"cat": "Strategic Design", "q": "Czym jest Anti-Corruption Layer?", "sub": "Ochrona wlasnego modelu", "term": "Anti-Corruption Layer (ACL)", "def": "Warstwa translacyjna, ktora <strong>chroni</strong> wlasny model domenowy przed skazeniem przez zewnetrzny system lub legacy code. Tlumaczy koncepty miedzy dwoma modelami.<br><br><strong>Implementacja:</strong> Kombinacja wzorcow Facade + Adapter + Translator<br><br><strong>Kiedy stosowac:</strong><br>- Integracja z systemem zewnetrznym<br>- Legacy system z chaotycznym modelem<br>- Zewnetrzna API narzuca swoj model", "code": "<span class=\"kw\">class</span> <span class=\"cls\">InventoryACL</span> {\n  <span class=\"fn\">getAvailableStock</span>(productId) {\n    <span class=\"cmt\">// Tlumaczenie z legacy formatu na nasz model</span>\n    <span class=\"kw\">const</span> raw = <span class=\"kw\">this</span>.legacyClient.<span class=\"fn\">fetchItem</span>(productId);\n    <span class=\"kw\">return new</span> <span class=\"cls\">StockLevel</span>(\n      raw.qty_on_hand - raw.qty_reserved,\n      <span class=\"cls\">UnitOfMeasure</span>.<span class=\"fn\">from</span>(raw.uom_code)\n    );\n  }\n}"}, {"cat": "Strategic Design", "q": "Czym jest Core Domain?", "sub": "Serce systemu", "term": "Core Domain (Rdzen Domeny)", "def": "Ta czesc domeny, ktora jest <strong>unikalna dla biznesu</strong> i stanowi o jego przewadze konkurencyjnej. To tutaj DDD powinno byc stosowane najglebiej.<br><br><strong>Distillation:</strong> Wyodrebnienie Core Domain od Generic Subdomains i Supporting Subdomains.<br><br><strong>Generic Subdomain</strong> - typowy problem (uwierzytelnianie, e-maile) - uzyj gotowego rozwiazania<br><strong>Supporting Subdomain</strong> - wspiera core, ale nie jest unikalne - pisz sam, ale prościej", "code": null}, {"cat": "Strategic Design", "q": "Customer-Supplier - jak ta relacja dziala?", "sub": "Miedzy Bounded Contexts", "term": "Customer-Supplier", "def": "Relacja miedzy dwoma Bounded Contexts, gdzie <strong>Supplier</strong> (dostawca) produkuje cos, czego potrzebuje <strong>Customer</strong> (odbiorca).<br><br><strong>Klucz:</strong> Customer ma prawo zglaszac wymagania do Suppliera i uczestniczyc w planowaniu.<br><br><strong>Conformist:</strong> Gdy Customer przyjmuje model Suppliera bez mozliwosci negocjacji (np. zewnetrzna API).", "code": null}, {"cat": "Strategic Design", "q": "Open Host Service - co to?", "sub": "Wzorzec integracji", "term": "Open Host Service", "def": "Bounded Context, ktory publikuje <strong>dobrze zdefiniowany protokol</strong> (API, zdarzenia) umozliwiajacy innym kontekstom integracje. Protokol jest jawny i dokumentowany.<br><br><strong>Kiedy stosowac:</strong> Gdy wiele kontekstow potrzebuje korzystac z danego kontekstu.<br><br><strong>Przyklad:</strong> Mikroserwis do zarzadzania produktami publikuje REST API uzywane przez kontekst sprzedazy, magazynowy, raportowania.", "code": null}, {"cat": "Strategic Design", "q": "Czym jest Shared Kernel?", "sub": "Wspoldzielony fragment modelu", "term": "Shared Kernel", "def": "Fragment modelu domenowego (kod i/lub baza danych), ktory jest <strong>wspoldzielony przez dwa lub wiecej Bounded Contexts</strong>. Zmiany wymagaja zgody wszystkich wlascicieli.<br><br><strong>Ryzyko:</strong> Zbyt duzy Shared Kernel = tight coupling = problem z niezaleznym wdrazaniem<br><strong>Zasada:</strong> Shared Kernel powinien byc maly i stabilny", "code": null}, {"cat": "Supple Design", "q": "Czym jest Supple Design?", "sub": "Rozdzial 10", "term": "Supple Design (Elastyczny Projekt)", "def": "Projekt, ktory jest <strong>przyjemny w pracy</strong> - czytelny, latwy do zmiany, zapraszajacy do refaktoryzacji. Elastyczny projekt sluzy zarowno klientom kodu jak i autorowi.<br><br><strong>Kluczowe wzorce:</strong><br>- Intention-Revealing Interfaces<br>- Side-Effect-Free Functions<br>- Assertions<br>- Conceptual Contours<br>- Standalone Classes<br>- Closure of Operations", "code": null}, {"cat": "Supple Design", "q": "Intention-Revealing Interfaces - co to?", "sub": "Kod mowi co robi, nie jak", "term": "Intention-Revealing Interfaces", "def": "Nazwy klas, metod i interfejsow wyrazaja <strong>intencje</strong> (co robia, jaki jest efekt) a nie implementacje (jak to robia).<br><br><strong>Zasada:</strong> Klient kodu nie powinien czytac implementacji, zeby zrozumiec co sie stanie.<br><br><strong>Test:</strong> Czy czytajac sama sygnatury metody, wiem co robi?", "code": "<span class=\"cmt\">// Ukrywa intencje</span>\n<span class=\"fn\">processData</span>(input);\n<span class=\"fn\">handle</span>(event);\n<span class=\"fn\">calc</span>(x, y);\n\n<span class=\"cmt\">// Odsłania intencje</span>\n<span class=\"fn\">findOverdueInvoices</span>(asOf);\n<span class=\"fn\">applyDiscount</span>(order, discount);\n<span class=\"fn\">calculateShippingCost</span>(weight, destination);"}, {"cat": "Supple Design", "q": "Side-Effect-Free Functions - dlaczego wazne?", "sub": "Przewidywalnosc kodu", "term": "Side-Effect-Free Functions", "def": "Funkcje (metody), ktore zwracaja wynik <strong>bez modyfikowania stanu</strong> systemu. Moga byc bezpiecznie wywolywane wielokrotnie i w dowolnej kolejnosci.<br><br><strong>Korzysci:</strong><br>- Latwe testowanie<br>- Latwe kombinowanie<br>- Brak niespodzianek<br><br><strong>Strategia:</strong> Rozdzielaj operacje modyfikujace (Command) od zapytan zwracajacych wartosc (Query) - Command-Query Separation", "code": "<span class=\"kw\">class</span> <span class=\"cls\">Paint</span> {\n  <span class=\"cmt\">// Side-effect free - zwraca nowa Paint</span>\n  <span class=\"fn\">mixedWith</span>(other) {\n    <span class=\"kw\">const</span> newColor = <span class=\"kw\">this</span>.color.<span class=\"fn\">blend</span>(other.color);\n    <span class=\"kw\">const</span> newVolume = <span class=\"kw\">this</span>.volume + other.volume;\n    <span class=\"kw\">return new</span> <span class=\"cls\">Paint</span>(newColor, newVolume);\n  }\n}"}, {"cat": "Supple Design", "q": "Czym jest Specification Pattern?", "sub": "Wyrazenie regul biznesowych jako obiektow", "term": "Specification (Specyfikacja)", "def": "Wzorzec, w ktorym regula biznesowa jest enkapsulowana jako <strong>samodzielny obiekt</strong> z metoda testujaca czy inny obiekt spelnia te regule.<br><br><strong>3 zastosowania:</strong><br>1. <strong>Walidacja</strong> - czy obiekt spelnia kryteria?<br>2. <strong>Selekcja</strong> - filtrowanie kolekcji<br>3. <strong>Tworzenie</strong> - budowanie obiektu wg specyfikacji", "code": "<span class=\"kw\">class</span> <span class=\"cls\">DelinquentInvoiceSpec</span> {\n  <span class=\"fn\">constructor</span>(currentDate) {\n    <span class=\"kw\">this</span>.currentDate = currentDate;\n  }\n  <span class=\"fn\">isSatisfiedBy</span>(invoice) {\n    <span class=\"kw\">const</span> grace = invoice.customer.<span class=\"fn\">getGracePeriod</span>();\n    <span class=\"kw\">return</span> invoice.dueDate &lt; <span class=\"fn\">subtractDays</span>(<span class=\"kw\">this</span>.currentDate, grace);\n  }\n}"}, {"cat": "Refaktoryzacja", "q": "Czym jest Breakthrough (przeom) w DDD?", "sub": "Rozdzial 8", "term": "Breakthrough (Przeom)", "def": "Moment, gdy po dlugiej pracy z modelem nastepuje <strong>nagle gleboke zrozumienie</strong> domeny, ktore prowadzi do radykalnego uproszczenia modelu i kodu. Przelomy bywaja gwaltowne i wymagaja odwagi do przeprojektowania.<br><br><strong>Sygnaly zbliajacego sie przelomu:</strong><br>- Wiele specjalnych przypadkow i wyjatkow<br>- Eksperci mowia, to wlasciwie to samo co...<br>- Kod staje sie coraz bardziej skomplikowany dla prostych przypadkow", "code": null}, {"cat": "Refaktoryzacja", "q": "Jak rozpoznac potrzebe glebszego modelu?", "sub": "Implicit vs Explicit Concepts", "term": "Making Implicit Concepts Explicit", "def": "Wiele waznych konceptow domenowych nie jest explicite w modelu - sa <strong>ukryte</strong> w logice metod lub komentarzach. DDD zacheca do ich wyciagania.<br><br><strong>Sygnaly ukrytego konceptu:</strong><br>- Jesli warunek X i Y i nie Z, to...<br>- Komentarze wyjasniajace skomplikowana warunkowosc<br>- Ekspert ma nazwe na cos, co w kodzie jest if-em<br><br><strong>Techniki odkrywania:</strong> sluchaj eksperta, czytaj literature dziedziny, eksperymentuj", "code": null}, {"cat": "Praktyka", "q": "Jakie sa roznice miedzy Application Service a Domain Service?", "sub": "Podzial odpowiedzialnosci", "term": "Application Service vs Domain Service", "def": "<strong>Application Service:</strong><br>- Orkiestruje przypadki uzycia<br>- Bezstanowy, brak regul biznesowych<br>- Zarzadza transakcjami i bezpieczenstwem<br>- Komunikuje sie z repozytoriami<br><br><strong>Domain Service:</strong><br>- Zawiera reguly biznesowe<br>- Operuje na obiektach domenowych<br>- Nie ma pojecia o infrastrukturze<br>- Nazwa pochodzi z Ubiquitous Language", "code": null}, {"cat": "Praktyka", "q": "Czym jest Anemic Domain Model i dlaczego to anty-wzorzec?", "sub": "Blad projektowy", "term": "Anemic Domain Model", "def": "Model, w ktorym obiekty domenowe to <strong>kontenery danych</strong> (gettery/settery) bez logiki biznesowej, a cala logika jest w serwisach.<br><br><strong>Dlaczego to blad:</strong><br>- Narusza enkapsulacje i OOP<br>- Logika biznesowa rozproszona w serwisach<br>- Model nie chroni swoich niezmiennikow<br>- Trudny do testowania i refaktoryzacji", "code": "<span class=\"cmt\">// Anemic Domain Model</span>\n<span class=\"kw\">class</span> <span class=\"cls\">Order</span> {\n  <span class=\"fn\">getStatus</span>() { <span class=\"kw\">return this</span>.status; }\n  <span class=\"fn\">setStatus</span>(s) { <span class=\"kw\">this</span>.status = s; } <span class=\"cmt\">// zero logiki!</span>\n}\n<span class=\"kw\">class</span> <span class=\"cls\">OrderService</span> {\n  <span class=\"fn\">confirm</span>(order) {\n    <span class=\"kw\">if</span> (order.<span class=\"fn\">getItems</span>().length > 0)\n      order.<span class=\"fn\">setStatus</span>(<span class=\"str\">\"CONFIRMED\"</span>); <span class=\"cmt\">// logika w serwisie!</span>\n  }\n}\n\n<span class=\"cmt\">// Rich Domain Model</span>\n<span class=\"kw\">class</span> <span class=\"cls\">Order</span> {\n  <span class=\"fn\">confirm</span>() {\n    <span class=\"kw\">if</span> (<span class=\"kw\">this</span>.items.length === 0) <span class=\"kw\">throw new</span> <span class=\"cls\">Error</span>(<span class=\"str\">\"Puste\"</span>);\n    <span class=\"kw\">this</span>.status = <span class=\"str\">\"CONFIRMED\"</span>;\n  }\n}"}, {"cat": "Praktyka", "q": "Co to jest Big Ball of Mud?", "sub": "Anty-wzorzec do rozpoznania", "term": "Big Ball of Mud", "def": "System bez zadnej widocznej architektury - spaghetti code, gdzie wszystko jest pomieszane. Evans uznaje te rzeczywistosc i zaleca:<br><br>1. Stosuj Bounded Context by oznaczyc granice chaosu<br>2. Uzywaj Anti-Corruption Layer przy integracji<br>3. Nie probuj narzucic modelu tam, gdzie chaos jest uksztaltowany - izoluj go i otaczaj porzadkiem<br><br><strong>Kluczowe:</strong> Nie udawaj, ze chaos nie istnieje - oznacz go na mapie kontekstow", "code": null}, {"cat": "Praktyka", "q": "Czym jest Continuous Learning w DDD?", "sub": "Proces, nie jednorazowy wysilek", "term": "Continuous Learning", "def": "DDD nie jest jednorazowym projektem modelowania - to <strong>ciagly proces</strong>. Wiedza o domenie stale rosnie, a model musi za nia nadazac.<br><br><strong>Praktyki ciagłego uczenia:</strong><br>- Regularne spotkania z ekspertami domenowymi<br>- Refaktoryzacja modelu wraz ze wzrostem wiedzy<br>- Poszukiwanie glebszych metafor i abstrakcji<br>- Odwazne przeprojektowanie gdy pojawia sie nowy wglad", "code": null}, {"cat": "Zaawansowane", "q": "Czym jest Event Storming?", "sub": "Technika odkrywania domeny", "term": "Event Storming", "def": "Metoda warsztatowa (Alberto Brandolini) do szybkiego odkrywania domeny przez <strong>mapowanie Domain Events</strong> na tablicy z karteczkami.<br><br><strong>Format:</strong> Eksperci i deweloperzy razem przyklejaja karteczki: zdarzenia (pomaranczowe), komendy (niebieskie), agregaty (zolte), widoki (zielone).<br><br><strong>Efekt:</strong> Szybkie odkrycie Bounded Contexts, agregatow i przeplywy procesu", "code": null}, {"cat": "Zaawansowane", "q": "CQRS a DDD - jak sie lacza?", "sub": "Command Query Responsibility Segregation", "term": "CQRS w DDD", "def": "CQRS to wzorzec architektoniczny naturalnie uzupelniajacy DDD. Rozdziela model <strong>zapisu</strong> (Command side - bogaty model domenowy) od modelu <strong>odczytu</strong> (Query side - zoptymalizowane widoki).<br><br><strong>Korzysci w DDD:</strong><br>- Command side: pelny model domenowy z agregatami<br>- Query side: proste, zoptymalizowane DTO/projekcje<br>- Unikanie kompromisow modelu dla obu celow jednoczesnie", "code": "<span class=\"cmt\">// Command side - bogaty model</span>\n<span class=\"kw\">class</span> <span class=\"cls\">PlaceOrderHandler</span> {\n  <span class=\"fn\">handle</span>(cmd) {\n    <span class=\"kw\">const</span> order = <span class=\"kw\">this</span>.factory.<span class=\"fn\">createOrder</span>(cmd);\n    order.<span class=\"fn\">place</span>();\n    <span class=\"kw\">this</span>.repo.<span class=\"fn\">save</span>(order);\n  }\n}\n<span class=\"cmt\">// Query side - plaska projekcja</span>\n<span class=\"kw\">class</span> <span class=\"cls\">OrderSummaryQuery</span> {\n  <span class=\"fn\">getByCustomer</span>(id) {\n    <span class=\"kw\">return this</span>.db.<span class=\"fn\">query</span>(<span class=\"str\">\"SELECT * FROM order_views WHERE customer_id=?\"</span>, id);\n  }\n}"}, {"cat": "Zaawansowane", "q": "Event Sourcing - zwiazek z DDD", "sub": "Persystencja przez zdarzenia", "term": "Event Sourcing", "def": "Wzorzec, w ktorym stan agregatu jest przechowywany jako <strong>sekwencja Domain Events</strong>, a nie snapshot biezacego stanu.<br><br><strong>Stan agregatu:</strong> Odtwarzany przez odgrywanie historii zdarzen od poczatku.<br><br><strong>Zalety:</strong> Pelna historia audytowa, naturalne Domain Events, czas przeszly w kodzie<br><strong>Wady:</strong> Zlozona implementacja, snapshoty dla dlugiej historii, ewolucja schematu zdarzen", "code": null}];
+
+var cards = ALL_CARDS.slice();
+var idx = 0;
+var flipped = false;
+var known = {};
+var unknown = {};
+var activeCat = "Wszystkie";
+
+var categories = ["Wszystkie"];
+ALL_CARDS.forEach(function(c) {
+  if (categories.indexOf(c.cat) === -1) categories.push(c.cat);
+});
+
+function buildCatBar() {
+  var bar = document.getElementById("catbar");
+  bar.innerHTML = "";
+  categories.forEach(function(cat) {
+    var btn = document.createElement("button");
+    btn.className = "catbtn" + (cat === activeCat ? " active" : "");
+    btn.textContent = cat;
+    btn.addEventListener("click", function() { setCategory(cat); });
+    bar.appendChild(btn);
+  });
+}
+
+function setCategory(cat) {
+  activeCat = cat;
+  if (cat === "Wszystkie") {
+    cards = ALL_CARDS.slice();
+  } else {
+    cards = ALL_CARDS.filter(function(c) { return c.cat === cat; });
+  }
+  idx = 0;
+  flipped = false;
+  document.getElementById("fc").classList.remove("flipped");
+  buildCatBar();
+  renderCard();
+  updateStats();
+}
+
+function renderCard() {
+  if (idx >= cards.length) { showOverlay(); return; }
+  var c = cards[idx];
+  document.getElementById("fCat").textContent = c.cat;
+  document.getElementById("bCat").textContent = c.cat;
+  document.getElementById("fQ").textContent = c.q;
+  document.getElementById("fSub").textContent = c.sub;
+  document.getElementById("bTerm").textContent = c.term;
+  var defHtml = c.def;
+  if (c.code) {
+    defHtml += '<div class="code-block">' + c.code + '</div>';
+  }
+  document.getElementById("bDef").innerHTML = defHtml;
+  document.getElementById("counter").textContent = "Fiszka " + (idx + 1) + " z " + cards.length;
+  var pct = Math.round((idx / cards.length) * 100);
+  document.getElementById("progBar").style.width = pct + "%";
+  flipped = false;
+  document.getElementById("fc").classList.remove("flipped");
+}
+
+function flipCard() {
+  flipped = !flipped;
+  document.getElementById("fc").classList.toggle("flipped", flipped);
+}
+
+function nextCard() {
+  if (idx < cards.length - 1) { idx++; renderCard(); }
+  else { showOverlay(); }
+}
+
+function prevCard() {
+  if (idx > 0) { idx--; renderCard(); }
+}
+
+function markKnown() {
+  var c = cards[idx];
+  known[c.q] = true;
+  delete unknown[c.q];
+  updateStats();
+  nextCard();
+}
+
+function markUnknown() {
+  var c = cards[idx];
+  unknown[c.q] = true;
+  delete known[c.q];
+  updateStats();
+  nextCard();
+}
+
+function shuffleCards() {
+  for (var i = cards.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = cards[i]; cards[i] = cards[j]; cards[j] = tmp;
+  }
+  idx = 0;
+  flipped = false;
+  document.getElementById("fc").classList.remove("flipped");
+  renderCard();
+}
+
+function updateStats() {
+  var total = ALL_CARDS.length;
+  var k = Object.keys(known).length;
+  var u = Object.keys(unknown).length;
+  document.getElementById("hTotal").textContent = total;
+  document.getElementById("hKnown").textContent = k;
+  document.getElementById("hUnknown").textContent = u;
+  var circ = 188.5;
+  var kD = (k / total) * circ;
+  var uD = (u / total) * circ;
+  var dgK = document.getElementById("dgK");
+  var dgU = document.getElementById("dgU");
+  dgK.style.strokeDasharray = kD + " " + circ;
+  dgU.style.strokeDasharray = uD + " " + circ;
+  dgU.style.strokeDashoffset = -(kD);
+  document.getElementById("dgPct").textContent = Math.round((k / total) * 100) + "%";
+  document.getElementById("lgK").textContent = k;
+  document.getElementById("lgU").textContent = u;
+  document.getElementById("lgN").textContent = total - k - u;
+  updateKList();
+}
+
+function updateKList() {
+  var cats = [];
+  ALL_CARDS.forEach(function(c) {
+    if (cats.indexOf(c.cat) === -1) cats.push(c.cat);
+  });
+  var html = "";
+  cats.forEach(function(cat) {
+    var catCards = ALL_CARDS.filter(function(c) { return c.cat === cat; });
+    var k = catCards.filter(function(c) { return known[c.q]; }).length;
+    var u = catCards.filter(function(c) { return unknown[c.q]; }).length;
+    var badge, cls;
+    if (k === catCards.length) { badge = "Gotowe!"; cls = "kn2"; }
+    else if (k > 0 || u > 0) { badge = k + "/" + catCards.length; cls = k >= u ? "kn2" : "un"; }
+    else { badge = "0/" + catCards.length; cls = "nt"; }
+    html += '<div class="ki"><span class="kn">' + cat + '</span><span class="kb ' + cls + '">' + badge + '</span></div>';
+  });
+  document.getElementById("kList").innerHTML = html;
+}
+
+function showOverlay() {
+  var k = cards.filter(function(c) { return known[c.q]; }).length;
+  document.getElementById("ovScore").textContent = "Umiem: " + k + " / " + cards.length + " fiszek";
+  document.getElementById("overlay").classList.add("show");
+}
+
+function restart() {
+  known = {}; unknown = {};
+  idx = 0; flipped = false;
+  cards = activeCat === "Wszystkie" ? ALL_CARDS.slice() : ALL_CARDS.filter(function(c) { return c.cat === activeCat; });
+  document.getElementById("fc").classList.remove("flipped");
+  document.getElementById("overlay").classList.remove("show");
+  renderCard();
+  updateStats();
+}
+
+document.getElementById("fc").addEventListener("click", flipCard);
+document.getElementById("btnPrev").addEventListener("click", prevCard);
+document.getElementById("btnNext").addEventListener("click", nextCard);
+document.getElementById("btnKnow").addEventListener("click", markKnown);
+document.getElementById("btnUnk").addEventListener("click", markUnknown);
+document.getElementById("btnShuf").addEventListener("click", shuffleCards);
+document.getElementById("btnRestart").addEventListener("click", restart);
+
+document.addEventListener("keydown", function(e) {
+  var tag = document.activeElement.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA") return;
+  if (e.key === " ") { e.preventDefault(); flipCard(); }
+  else if (e.key === "ArrowRight") { nextCard(); }
+  else if (e.key === "ArrowLeft") { prevCard(); }
+  else if (e.key === "k" || e.key === "K") { markKnown(); }
+  else if (e.key === "u" || e.key === "U") { markUnknown(); }
+  else if (e.key === "s" || e.key === "S") { shuffleCards(); }
+});
+
+buildCatBar();
+renderCard();
+updateStats();
+</script>
+</body>
+</html>
